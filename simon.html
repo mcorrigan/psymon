@@ -1,0 +1,232 @@
+<html>
+<body>
+
+<div class="board">
+    <div class="center">
+        <h1>SIMON</h1>
+        <button id="startBtn" onclick="startGame()">Start</button>
+    </div>
+    <div class="group">
+        <div id="greenBlock" onclick="blockClick(event)" onmousedown="turnBlockOn(event)" onmouseup="turnBlockOff(event)" class="green block"></div>
+        <div id="redBlock" onclick="blockClick(event)" onmousedown="turnBlockOn(event)" onmouseup="turnBlockOff(event)"  class="red block"></div>
+    </div>
+    <div class="group">
+        <div id="yellowBlock" onclick="blockClick(event)" onmousedown="turnBlockOn(event)" onmouseup="turnBlockOff(event)"  class="yellow block"></div>
+        <div id="blueBlock" onclick="blockClick(event)" onmousedown="turnBlockOn(event)" onmouseup="turnBlockOff(event)"  class="blue block"></div>
+    </div>
+</div>
+
+<audio id="audioPlayer"></audio>
+
+<script>
+    const REP_MODE = 1;
+    const USER_MODE = 2;
+
+    let level = 0;
+    let genPattern = [];
+    let userPattern = [];
+    let mode = REP_MODE;
+    let blockList = ["green", "blue", "red","yellow"];
+    const audioPlayer = document.getElementById('audioPlayer');
+
+    async function flashBlock(color, time){
+        document.getElementById(`${color}Block`).className = `${color} block on`;
+        await waitForSec(time);
+        document.getElementById(`${color}Block`).className = `${color} block`;
+    }
+
+    async function startGame() {
+        level = 0;
+        genPattern = [];
+        userPattern = [];
+        userPatternIndex = 0;
+
+        document.getElementById('startBtn').style.display = "none";
+
+        playSound('intro');
+        const time = .2
+        await flashBlock('red', time)
+        await flashBlock('blue', time)
+        await flashBlock('yellow', time)
+        await flashBlock('green', time)
+        await flashBlock('red', time)
+        await flashBlock('blue', time)
+        await flashBlock('yellow', time)
+        await flashBlock('green', time)
+        await Promise.all([flashBlock('green', time), flashBlock('blue', time), flashBlock('red', time), flashBlock('yellow', time)])
+        await waitForSec(.2)
+        await Promise.all([flashBlock('green', time), flashBlock('blue', time), flashBlock('red', time), flashBlock('yellow', time)])
+        await waitForSec(.2)
+        await Promise.all([flashBlock('green', time), flashBlock('blue', time), flashBlock('red', time), flashBlock('yellow', time)])
+        
+        await advanceLevel();
+    }
+
+    function getRandomBlock(){
+        return blockList[Math.floor(Math.random() * 4)];
+    }
+
+    async function playPattern(){
+        return new Promise(async (resolve, reject) => {
+            let i = 0;
+            while (i < genPattern.length){
+                await waitForSec(.2)
+                playSound(genPattern[i])
+                await flashBlock(genPattern[i], .5);
+                i++;
+            }
+            resolve();
+        });        
+    }
+
+    async function waitForSec(timeout){
+        return new Promise((resolve, reject) => {
+            setTimeout(() => resolve(), timeout * 1000);
+        })
+    }
+
+    async function advanceLevel(){
+        mode = REP_MODE
+        level++;
+        userPattern = [];
+        userPatternIndex = 0;
+
+        genPattern.push(getRandomBlock());
+        await waitForSec(1)
+        await playPattern();
+        
+        mode = USER_MODE;
+    }
+
+    let userPatternIndex = 0;
+    async function blockClick(e){
+        if (mode == USER_MODE)
+        {
+            let color = e.currentTarget.id.replace('Block','');
+            if (genPattern[userPatternIndex] !== color){
+                mode = REP_MODE;
+                await waitForSec(.1);
+                playSound('oops')
+                const time = .2;
+                await Promise.all([flashBlock('green', time), flashBlock('blue', time), flashBlock('red', time), flashBlock('yellow', time)])
+                await waitForSec(.2)
+                await Promise.all([flashBlock('green', time), flashBlock('blue', time), flashBlock('red', time), flashBlock('yellow', time)])
+                await waitForSec(.2)
+                await Promise.all([flashBlock('green', time), flashBlock('blue', time), flashBlock('red', time), flashBlock('yellow', time)])
+                endGame();
+            }else{
+                userPatternIndex++;
+                if (userPatternIndex == genPattern.length){
+                    await waitForSec(.2);
+                    advanceLevel();
+                }
+            }
+        }
+    }
+
+    function playSound(name){
+        audioPlayer.src = `${name}.mp3`;
+        audioPlayer.play();
+    }
+
+    async function endGame(){
+        playSound('gameover');
+        const time = .1
+        await flashBlock('red', time)
+        await flashBlock('blue', time)
+        await flashBlock('yellow', time)
+        await flashBlock('green', time)
+
+        document.getElementById('startBtn').style.display = "block";
+    }
+
+    async function turnBlockOn(e){
+        if (mode == USER_MODE){
+            let color = e.currentTarget.id.replace('Block','');
+            document.getElementById(`${color}Block`).className = `${color} block on`;
+            playSound(color)
+        }
+    }
+    async function turnBlockOff(e){
+        let color = e.currentTarget.id.replace('Block','');
+        await waitForSec(.1);
+        document.getElementById(`${color}Block`).className = `${color} block`;
+    }
+
+</script>
+
+
+<style>
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #ddd;
+        color: white;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    .board{
+        position: relative;
+        border-radius: 400px;
+        border: 30px solid transparent;
+        overflow: hidden;
+        box-shadow: 0px 2px 11px 0px rgba(0,0,0,0.5);
+        background-color: black;
+    }
+    .center {
+        background-color: black;
+        border-radius: 50%;
+        position: absolute;
+        height: 250px;
+        width: 250px;
+        top: 125px;
+        left: 125px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .group {
+        display: flex;
+        flex-direction: row;
+    }
+    .block {
+        height: 200px;
+        width: 200px;
+        padding: 1em;
+        box-shadow: inset 0px 0px 20px 15px rgba(0, 0, 0, 0.15);
+        margin: 10px;
+        border-radius: 32px;
+    }
+    .on {
+        box-shadow: inset 0px 0px 20px 15px rgba(255, 255, 255, 0.5);
+    }
+    .red {
+        background-color: rgba(125,0,0,1);
+    }
+    .red.on {
+        background-color: rgba(255,0,0,1);
+    }
+    .green {
+        background-color: rgba(0,125,0,1);
+    }
+    .green.on {
+        background-color: rgba(0,255,0,1);
+    }
+    .blue {
+        background-color: rgba(0,0,120,1);
+    }
+    .blue.on {
+        background-color: rgb(26, 76, 255);
+    }
+    .yellow {
+        background-color: rgb(120, 102, 0);
+    }
+    .yellow.on {
+        background-color: rgb(255, 217, 0);
+    }
+</style>
+
+</body>
+</html>
